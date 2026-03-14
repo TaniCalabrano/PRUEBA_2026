@@ -9,7 +9,8 @@ st.title("Explorador Matemático")
 
 x = sp.symbols('x')
 
-# ---------- MEMORIA ----------
+# -------- MEMORIA --------
+
 if "expr_text" not in st.session_state:
     st.session_state.expr_text = ""
 
@@ -19,7 +20,7 @@ def agregar(valor):
 def borrar():
     st.session_state.expr_text = ""
 
-# ---------- FUNCION PASO A PASO ----------
+# -------- PASOS DE DERIVACIÓN --------
 
 def derivada_pasos(expr, x):
 
@@ -28,7 +29,6 @@ def derivada_pasos(expr, x):
     pasos.append(r"\textbf{Paso 1: Derivamos respecto a } x")
     pasos.append(r"\frac{d}{dx}\left(" + sp.latex(expr) + r"\right)")
 
-    # SUMA
     if expr.is_Add:
 
         pasos.append(r"\textbf{Paso 2: Aplicamos la linealidad de la derivada}")
@@ -47,7 +47,6 @@ def derivada_pasos(expr, x):
 
         pasos.append(derivadas)
 
-    # POTENCIA
     elif expr.is_Pow and expr.args[0] == x:
 
         pasos.append(r"\textbf{Paso 2: Aplicamos la regla de la potencia}")
@@ -56,7 +55,6 @@ def derivada_pasos(expr, x):
 
         pasos.append(sp.latex(sp.diff(expr, x)))
 
-    # PRODUCTO
     elif expr.is_Mul:
 
         pasos.append(r"\textbf{Paso 2: Aplicamos la regla del producto}")
@@ -73,7 +71,60 @@ def derivada_pasos(expr, x):
 
     return pasos
 
-# ---------- TECLADO ----------
+# -------- ANALISIS DE DERIVADA --------
+
+def analizar_derivada(derivada, x):
+
+    tipo = ""
+    comportamiento = ""
+
+    if derivada.is_number:
+        tipo = "Función constante"
+
+    elif derivada.is_polynomial():
+
+        grado = sp.degree(derivada)
+
+        if grado == 0:
+            tipo = "Función constante"
+        elif grado == 1:
+            tipo = "Función lineal"
+        elif grado == 2:
+            tipo = "Función cuadrática"
+        else:
+            tipo = f"Polinomio de grado {grado}"
+
+    else:
+        tipo = "Función no polinómica"
+
+    try:
+
+        criticos = sp.solve(sp.diff(derivada, x), x)
+
+        if derivada.is_number:
+
+            if derivada > 0:
+                comportamiento = "La función original es creciente en todo su dominio."
+            elif derivada < 0:
+                comportamiento = "La función original es decreciente en todo su dominio."
+            else:
+                comportamiento = "La función es constante."
+
+        elif len(criticos) == 0:
+
+            comportamiento = "La función mantiene el mismo comportamiento en todo su dominio."
+
+        else:
+
+            comportamiento = f"La derivada cambia de comportamiento en x = {criticos}"
+
+    except:
+
+        comportamiento = "No se pudo analizar completamente el comportamiento."
+
+    return tipo, comportamiento
+
+# -------- TECLADO --------
 
 st.subheader("Teclado matemático")
 
@@ -115,11 +166,9 @@ with c6:
     st.button("tan", on_click=agregar, args=("tan(",))
     st.button("Borrar", on_click=borrar)
 
-# ---------- CAMPO DE FUNCION ----------
-
 expr_text = st.text_input("Función:", st.session_state.expr_text)
 
-# ---------- PROCESAMIENTO ----------
+# -------- CALCULOS --------
 
 try:
 
@@ -135,7 +184,7 @@ try:
 
     col1, col2 = st.columns(2)
 
-# ---------- COLUMNA IZQUIERDA ----------
+# -------- COLUMNA IZQUIERDA --------
 
     with col1:
 
@@ -151,8 +200,6 @@ try:
         st.subheader("Raíces")
         st.write(raices)
 
-        # ----- GRAFICA -----
-
         f = sp.lambdify(x, expr, "numpy")
         d = sp.lambdify(x, derivada, "numpy")
 
@@ -161,12 +208,7 @@ try:
 
         fig = go.Figure()
 
-        fig.add_trace(go.Scatter(
-            x=xs,
-            y=ys,
-            mode='lines',
-            name='f(x)'
-        ))
+        fig.add_trace(go.Scatter(x=xs,y=ys,mode='lines',name='f(x)'))
 
         punto = st.slider("Punto para recta tangente", -5.0, 5.0, 0.0)
 
@@ -175,29 +217,15 @@ try:
 
         tangente = pendiente*(xs-punto)+y0
 
-        fig.add_trace(go.Scatter(
-            x=xs,
-            y=tangente,
-            mode='lines',
-            name='Tangente'
-        ))
+        fig.add_trace(go.Scatter(x=xs,y=tangente,mode='lines',name='Tangente'))
 
-        fig.add_trace(go.Scatter(
-            x=[punto],
-            y=[y0],
-            mode='markers',
-            name='Punto'
-        ))
+        fig.add_trace(go.Scatter(x=[punto],y=[y0],mode='markers',name='Punto'))
 
-        fig.update_layout(
-            title="Gráfica",
-            xaxis_title="x",
-            yaxis_title="y"
-        )
+        fig.update_layout(title="Gráfica",xaxis_title="x",yaxis_title="y")
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig,use_container_width=True)
 
-# ---------- COLUMNA DERECHA ----------
+# -------- COLUMNA DERECHA --------
 
     with col2:
 
@@ -207,6 +235,18 @@ try:
 
         for p in pasos:
             st.latex(p)
+
+        st.markdown("### Solución")
+
+        st.latex("f'(x) = " + sp.latex(derivada))
+
+        tipo, comportamiento = analizar_derivada(derivada, x)
+
+        st.markdown("**Tipo de función de la derivada:**")
+        st.write(tipo)
+
+        st.markdown("**Comportamiento:**")
+        st.write(comportamiento)
 
 except:
     st.info("Escribe una función para comenzar.")
