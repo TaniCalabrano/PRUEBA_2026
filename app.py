@@ -9,8 +9,7 @@ st.title("Explorador Matemático")
 
 x = sp.symbols('x')
 
-# -------- MEMORIA --------
-
+# ---------- MEMORIA ----------
 if "expr_text" not in st.session_state:
     st.session_state.expr_text = ""
 
@@ -20,7 +19,61 @@ def agregar(valor):
 def borrar():
     st.session_state.expr_text = ""
 
-# -------- TECLADO --------
+# ---------- FUNCION PASO A PASO ----------
+
+def derivada_pasos(expr, x):
+
+    pasos = []
+
+    pasos.append(r"\textbf{Paso 1: Derivamos respecto a } x")
+    pasos.append(r"\frac{d}{dx}\left(" + sp.latex(expr) + r"\right)")
+
+    # SUMA
+    if expr.is_Add:
+
+        pasos.append(r"\textbf{Paso 2: Aplicamos la linealidad de la derivada}")
+
+        suma = " + ".join(
+            [r"\frac{d}{dx}\left(" + sp.latex(t) + r"\right)" for t in expr.args]
+        )
+
+        pasos.append(suma)
+
+        pasos.append(r"\textbf{Paso 3: Derivamos cada término}")
+
+        derivadas = " + ".join(
+            [sp.latex(sp.diff(t, x)) for t in expr.args]
+        )
+
+        pasos.append(derivadas)
+
+    # POTENCIA
+    elif expr.is_Pow and expr.args[0] == x:
+
+        pasos.append(r"\textbf{Paso 2: Aplicamos la regla de la potencia}")
+
+        pasos.append(r"\frac{d}{dx}(x^n)=nx^{n-1}")
+
+        pasos.append(sp.latex(sp.diff(expr, x)))
+
+    # PRODUCTO
+    elif expr.is_Mul:
+
+        pasos.append(r"\textbf{Paso 2: Aplicamos la regla del producto}")
+
+        pasos.append(r"(uv)' = u'v + uv'")
+
+        pasos.append(sp.latex(sp.diff(expr, x)))
+
+    else:
+
+        pasos.append(r"\textbf{Aplicamos derivación directa}")
+
+        pasos.append(sp.latex(sp.diff(expr, x)))
+
+    return pasos
+
+# ---------- TECLADO ----------
 
 st.subheader("Teclado matemático")
 
@@ -62,11 +115,11 @@ with c6:
     st.button("tan", on_click=agregar, args=("tan(",))
     st.button("Borrar", on_click=borrar)
 
-# -------- CAMPO DE FUNCIÓN --------
+# ---------- CAMPO DE FUNCION ----------
 
 expr_text = st.text_input("Función:", st.session_state.expr_text)
 
-# -------- PROCESAMIENTO --------
+# ---------- PROCESAMIENTO ----------
 
 try:
 
@@ -78,11 +131,11 @@ try:
     try:
         raices = sp.solve(expr, x)
     except:
-        raices = "No simbólicas"
+        raices = "No se encontraron raíces simbólicas"
 
     col1, col2 = st.columns(2)
 
-# -------- COLUMNA IZQUIERDA (RESULTADOS + GRÁFICA) --------
+# ---------- COLUMNA IZQUIERDA ----------
 
     with col1:
 
@@ -98,7 +151,7 @@ try:
         st.subheader("Raíces")
         st.write(raices)
 
-        # -------- GRÁFICA INTERACTIVA --------
+        # ----- GRAFICA -----
 
         f = sp.lambdify(x, expr, "numpy")
         d = sp.lambdify(x, derivada, "numpy")
@@ -144,44 +197,16 @@ try:
 
         st.plotly_chart(fig, use_container_width=True)
 
-# -------- COLUMNA DERECHA (PROCEDIMIENTO) --------
+# ---------- COLUMNA DERECHA ----------
 
     with col2:
 
-        st.subheader("Procedimiento paso a paso")
+        st.subheader("Procedimiento de la derivada")
 
-        st.markdown("**1. Función original**")
-        st.latex("f(x) = " + sp.latex(expr))
+        pasos = derivada_pasos(expr, x)
 
-        st.markdown("**2. Derivamos respecto a x**")
-
-        st.latex(
-            "\\frac{d}{dx}\\left(" + sp.latex(expr) + "\\right)"
-        )
-
-        st.markdown("**3. Resultado de la derivada**")
-
-        st.latex("f'(x) = " + sp.latex(derivada))
-
-        st.markdown("**4. Calculamos la integral**")
-
-        st.latex(
-            "\\int " + sp.latex(expr) + "\\,dx"
-        )
-
-        st.markdown("**5. Resultado de la integral**")
-
-        st.latex(
-            sp.latex(integral)
-        )
-
-        st.markdown("**6. Encontramos las raíces**")
-
-        st.latex(
-            sp.latex(expr) + "=0"
-        )
-
-        st.write("Soluciones:", raices)
+        for p in pasos:
+            st.latex(p)
 
 except:
     st.info("Escribe una función para comenzar.")
