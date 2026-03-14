@@ -3,13 +3,14 @@ import sympy as sp
 import numpy as np
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Explorador Matemático PRO", layout="wide")
+st.set_page_config(page_title="Explorador Matemático", layout="wide")
 
-st.title("Explorador Matemático PRO")
+st.title("Explorador Matemático")
 
 x = sp.symbols('x')
 
-# ---------- MEMORIA ----------
+# -------- MEMORIA --------
+
 if "expr_text" not in st.session_state:
     st.session_state.expr_text = ""
 
@@ -19,8 +20,9 @@ def agregar(valor):
 def borrar():
     st.session_state.expr_text = ""
 
-# ---------- TECLADO ----------
-st.subheader("Teclado Matemático")
+# -------- TECLADO --------
+
+st.subheader("Teclado matemático")
 
 c1,c2,c3,c4,c5,c6 = st.columns(6)
 
@@ -60,10 +62,12 @@ with c6:
     st.button("tan", on_click=agregar, args=("tan(",))
     st.button("Borrar", on_click=borrar)
 
-# ---------- CAMPO DE FUNCION ----------
+# -------- CAMPO DE FUNCIÓN --------
+
 expr_text = st.text_input("Función:", st.session_state.expr_text)
 
-# ---------- CÁLCULOS ----------
+# -------- PROCESAMIENTO --------
+
 try:
 
     expr = sp.sympify(expr_text)
@@ -76,15 +80,30 @@ try:
     except:
         raices = "No simbólicas"
 
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns(2)
 
-    # ---------- GRAFICA ----------
+# -------- COLUMNA IZQUIERDA (RESULTADOS + GRÁFICA) --------
+
     with col1:
+
+        st.subheader("Función")
+        st.latex(sp.latex(expr))
+
+        st.subheader("Derivada")
+        st.latex(sp.latex(derivada))
+
+        st.subheader("Integral")
+        st.latex(sp.latex(integral))
+
+        st.subheader("Raíces")
+        st.write(raices)
+
+        # -------- GRÁFICA INTERACTIVA --------
 
         f = sp.lambdify(x, expr, "numpy")
         d = sp.lambdify(x, derivada, "numpy")
 
-        xs = np.linspace(-10,10,500)
+        xs = np.linspace(-10,10,400)
         ys = f(xs)
 
         fig = go.Figure()
@@ -96,7 +115,6 @@ try:
             name='f(x)'
         ))
 
-        # tangente
         punto = st.slider("Punto para recta tangente", -5.0, 5.0, 0.0)
 
         pendiente = d(punto)
@@ -119,29 +137,51 @@ try:
         ))
 
         fig.update_layout(
-            title="Gráfica interactiva",
+            title="Gráfica",
             xaxis_title="x",
             yaxis_title="y"
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # ---------- RESULTADOS ----------
+# -------- COLUMNA DERECHA (PROCEDIMIENTO) --------
+
     with col2:
 
-        st.subheader("Resultados")
+        st.subheader("Procedimiento paso a paso")
 
-        st.markdown("**Función**")
-        st.latex(sp.latex(expr))
+        st.markdown("**1. Función original**")
+        st.latex("f(x) = " + sp.latex(expr))
 
-        st.markdown("**Derivada**")
-        st.latex(sp.latex(derivada))
+        st.markdown("**2. Derivamos respecto a x**")
 
-        st.markdown("**Integral**")
-        st.latex(sp.latex(integral))
+        st.latex(
+            "\\frac{d}{dx}\\left(" + sp.latex(expr) + "\\right)"
+        )
 
-        st.markdown("**Raíces**")
-        st.write(raices)
+        st.markdown("**3. Resultado de la derivada**")
+
+        st.latex("f'(x) = " + sp.latex(derivada))
+
+        st.markdown("**4. Calculamos la integral**")
+
+        st.latex(
+            "\\int " + sp.latex(expr) + "\\,dx"
+        )
+
+        st.markdown("**5. Resultado de la integral**")
+
+        st.latex(
+            sp.latex(integral)
+        )
+
+        st.markdown("**6. Encontramos las raíces**")
+
+        st.latex(
+            sp.latex(expr) + "=0"
+        )
+
+        st.write("Soluciones:", raices)
 
 except:
     st.info("Escribe una función para comenzar.")
