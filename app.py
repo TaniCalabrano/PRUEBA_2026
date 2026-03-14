@@ -2,6 +2,7 @@ import streamlit as st
 import sympy as sp
 import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 st.set_page_config(page_title="Explorador Matemático", layout="wide")
 
@@ -204,24 +205,31 @@ try:
         d = sp.lambdify(x, derivada, "numpy")
 
         xs = np.linspace(-10,10,400)
+
         ys = f(xs)
+        yd = d(xs)
 
-        fig = go.Figure()
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            subplot_titles=("f(x)", "f'(x)")
+        )
 
-        fig.add_trace(go.Scatter(x=xs,y=ys,mode='lines',name='f(x)'))
+        fig.add_trace(
+            go.Scatter(x=xs, y=ys, mode='lines', name='f(x)'),
+            row=1, col=1
+        )
 
-        punto = st.slider("Punto para recta tangente", -5.0, 5.0, 0.0)
+        fig.add_trace(
+            go.Scatter(x=xs, y=yd, mode='lines', name="f'(x)"),
+            row=2, col=1
+        )
 
-        pendiente = d(punto)
-        y0 = f(punto)
-
-        tangente = pendiente*(xs-punto)+y0
-
-        fig.add_trace(go.Scatter(x=xs,y=tangente,mode='lines',name='Tangente'))
-
-        fig.add_trace(go.Scatter(x=[punto],y=[y0],mode='markers',name='Punto'))
-
-        fig.update_layout(title="Gráfica",xaxis_title="x",yaxis_title="y")
+        fig.update_layout(
+            height=600,
+            title="Función y su derivada"
+        )
 
         st.plotly_chart(fig,use_container_width=True)
 
