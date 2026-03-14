@@ -1,65 +1,69 @@
 import streamlit as st
 import sympy as sp
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
+st.set_page_config(page_title="Explorador Matemático PRO", layout="wide")
 
-# -------- FUNCION QUE EXPLICA LA DERIVADA --------
-
-def explicar_derivada(expr, x):
-
-    pasos = []
-
-    if expr.is_Add:
-        pasos.append("La función es una **suma**. Derivamos cada término:")
-
-        for termino in expr.args:
-            d = sp.diff(termino, x)
-            pasos.append(f"$\\frac{{d}}{{dx}}({sp.latex(termino)}) = {sp.latex(d)}$")
-
-    elif expr.is_Mul:
-        pasos.append("La función es un **producto**. Aplicamos la regla del producto:")
-
-        pasos.append(r"$ (uv)' = u'v + uv'$")
-
-        d = sp.diff(expr, x)
-        pasos.append(f"Resultado: ${sp.latex(d)}$")
-
-    elif expr.is_Pow:
-
-        base, exp = expr.args
-
-        if base == x:
-
-            pasos.append("Aplicamos la **regla de la potencia**")
-
-            pasos.append(r"$\frac{d}{dx}(x^n)=nx^{n-1}$")
-
-            d = sp.diff(expr, x)
-
-            pasos.append(f"$\\frac{{d}}{{dx}}({sp.latex(expr)}) = {sp.latex(d)}$")
-
-    else:
-
-        d = sp.diff(expr, x)
-
-        pasos.append("Derivamos directamente:")
-
-        pasos.append(f"$\\frac{{d}}{{dx}}({sp.latex(expr)}) = {sp.latex(d)}$")
-
-    return pasos
-
-
-# -------- INTERFAZ --------
-
-st.title("Explorador Matemático")
+st.title("Explorador Matemático PRO")
 
 x = sp.symbols('x')
 
-expr_text = st.text_input("Escribe una función en x", "x**2 + 3*x + 1")
+# ---------- MEMORIA ----------
+if "expr_text" not in st.session_state:
+    st.session_state.expr_text = ""
 
-col1, col2 = st.columns(2)
+def agregar(valor):
+    st.session_state.expr_text += valor
 
+def borrar():
+    st.session_state.expr_text = ""
+
+# ---------- TECLADO ----------
+st.subheader("Teclado Matemático")
+
+c1,c2,c3,c4,c5,c6 = st.columns(6)
+
+with c1:
+    st.button("7", on_click=agregar, args=("7",))
+    st.button("4", on_click=agregar, args=("4",))
+    st.button("1", on_click=agregar, args=("1",))
+    st.button("0", on_click=agregar, args=("0",))
+
+with c2:
+    st.button("8", on_click=agregar, args=("8",))
+    st.button("5", on_click=agregar, args=("5",))
+    st.button("2", on_click=agregar, args=("2",))
+    st.button("x", on_click=agregar, args=("x",))
+
+with c3:
+    st.button("9", on_click=agregar, args=("9",))
+    st.button("6", on_click=agregar, args=("6",))
+    st.button("3", on_click=agregar, args=("3",))
+    st.button("+", on_click=agregar, args=("+",))
+
+with c4:
+    st.button("-", on_click=agregar, args=("-",))
+    st.button("*", on_click=agregar, args=("*",))
+    st.button("/", on_click=agregar, args=("/",))
+    st.button("(", on_click=agregar, args=("(",))
+
+with c5:
+    st.button(")", on_click=agregar, args=(")",))
+    st.button("^2", on_click=agregar, args=("**2",))
+    st.button("^3", on_click=agregar, args=("**3",))
+    st.button("√", on_click=agregar, args=("sqrt(",))
+
+with c6:
+    st.button("sin", on_click=agregar, args=("sin(",))
+    st.button("cos", on_click=agregar, args=("cos(",))
+    st.button("tan", on_click=agregar, args=("tan(",))
+    st.button("Borrar", on_click=borrar)
+
+# ---------- CAMPO DE FUNCION ----------
+expr_text = st.text_input("Función:", st.session_state.expr_text)
+
+# ---------- CÁLCULOS ----------
 try:
 
     expr = sp.sympify(expr_text)
@@ -67,106 +71,77 @@ try:
     derivada = sp.diff(expr, x)
     integral = sp.integrate(expr, x)
 
-    # -------- BUSCAR RAICES --------
-
     try:
         raices = sp.solve(expr, x)
+    except:
+        raices = "No simbólicas"
 
-    except Exception:
-        try:
-            raices = [sp.nsolve(expr, x, 0)]
-        except Exception:
-            raices = "No se pudieron encontrar raíces"
+    col1, col2 = st.columns([2,1])
 
-    # -------- COLUMNA IZQUIERDA --------
-
+    # ---------- GRAFICA ----------
     with col1:
-
-        st.subheader("Función")
-        st.latex(sp.latex(expr))
-
-        st.subheader("Derivada")
-        st.latex(sp.latex(derivada))
-
-        st.subheader("Integral")
-        st.latex(sp.latex(integral))
-
-        st.subheader("Raíces")
-        st.write(raices)
-
-        # -------- GRAFICA --------
 
         f = sp.lambdify(x, expr, "numpy")
         d = sp.lambdify(x, derivada, "numpy")
 
-        xs = np.linspace(-10, 10, 400)
-
+        xs = np.linspace(-10,10,500)
         ys = f(xs)
-        yd = d(xs)
 
-        fig, ax = plt.subplots()
+        fig = go.Figure()
 
-        ax.plot(xs, ys, label="f(x)")
-        ax.plot(xs, yd, label="f'(x)")
+        fig.add_trace(go.Scatter(
+            x=xs,
+            y=ys,
+            mode='lines',
+            name='f(x)'
+        ))
 
-        ax.axhline(0)
-        ax.axvline(0)
+        # tangente
+        punto = st.slider("Punto para recta tangente", -5.0, 5.0, 0.0)
 
-        ax.legend()
+        pendiente = d(punto)
+        y0 = f(punto)
 
-        st.subheader("Gráfica")
+        tangente = pendiente*(xs-punto)+y0
 
-        st.pyplot(fig)
+        fig.add_trace(go.Scatter(
+            x=xs,
+            y=tangente,
+            mode='lines',
+            name='Tangente'
+        ))
 
-    # -------- COLUMNA DERECHA --------
+        fig.add_trace(go.Scatter(
+            x=[punto],
+            y=[y0],
+            mode='markers',
+            name='Punto'
+        ))
 
+        fig.update_layout(
+            title="Gráfica interactiva",
+            xaxis_title="x",
+            yaxis_title="y"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------- RESULTADOS ----------
     with col2:
 
-        st.subheader("Procedimiento")
+        st.subheader("Resultados")
 
-        pasos = explicar_derivada(expr, x)
+        st.markdown("**Función**")
+        st.latex(sp.latex(expr))
 
-        st.subheader("Procedimiento de la derivada")
+        st.markdown("**Derivada**")
+        st.latex(sp.latex(derivada))
 
-        for p in pasos:
-            st.markdown(p)
+        st.markdown("**Integral**")
+        st.latex(sp.latex(integral))
 
-        st.markdown("**1. Función original**")
-        st.latex("f(x) = " + sp.latex(expr))
+        st.markdown("**Raíces**")
+        st.write(raices)
 
-        st.markdown("**2. Derivamos respecto a x**")
-
-        st.latex(
-            "\\frac{d}{dx}\\left(" + sp.latex(expr) + "\\right)"
-        )
-
-        st.markdown("**3. Resultado de la derivada**")
-
-        st.latex("f'(x) = " + sp.latex(derivada))
-
-        st.markdown("**4. Calculamos la integral**")
-
-        st.latex(
-            "\\int " + sp.latex(expr) + "\\, dx"
-        )
-
-        st.markdown("**5. Resultado de la integral**")
-
-        st.latex(
-            "\\int " + sp.latex(expr) + "\\, dx = " + sp.latex(integral)
-        )
-
-        st.markdown("**6. Encontramos las raíces**")
-
-        st.latex(
-            sp.latex(expr) + "=0"
-        )
-
-        st.write("Soluciones:", raices)
-
-
-except Exception as e:
-
-    st.error("Error en la función")
-
-    st.write(e)
+except:
+    st.info("Escribe una función para comenzar.")
